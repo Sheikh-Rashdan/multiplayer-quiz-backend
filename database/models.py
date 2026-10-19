@@ -9,12 +9,28 @@ class Base(DeclarativeBase):
     pass
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+
+    quizzes: Mapped[list[Quiz]] = relationship(
+        back_populates="author", cascade="all, delete-orphan"
+    )
+
+
 class Quiz(Base):
     __tablename__ = "quizzes"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    author: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    author_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    author: Mapped[User] = relationship(back_populates="quizzes")
 
     questions: Mapped[list[Question]] = relationship(
         back_populates="quiz", cascade="all, delete-orphan"
