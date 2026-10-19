@@ -5,7 +5,7 @@ class QuizPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     author: str | None = Field(default=None, min_length=1)
 
-    @model_validator
+    @model_validator(mode="after")
     def validate_non_nullable_fields(self):
         fields = ("name",)
         for field in fields:
