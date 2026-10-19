@@ -3,7 +3,9 @@ name = "multiplayer-quiz-backend"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
+    "bcrypt>=5.0.0",
     "fastapi[standard]>=0.148.0",
+    "python-jose[cryptography]>=3.5.0",
     "sqlalchemy>=2.1.5",
 ]
 
