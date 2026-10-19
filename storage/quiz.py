@@ -28,3 +28,27 @@ def post_quiz(db: Session, create_dict: dict[str, Any]) -> Quiz:
         raise
 
     return quiz
+
+
+def delete_quiz(db: Session, quiz: Quiz) -> None:
+    db.delete(quiz)
+
+    try:
+        db.commit()
+    except:
+        db.rollback()
+        raise
+
+
+def patch_quiz(db: Session, quiz: Quiz, patch_dict: dict[str, Any]) -> Quiz:
+    for attribute, value in patch_dict.items():
+        setattr(quiz, attribute, value)
+
+    try:
+        db.commit()
+        db.refresh(quiz)
+    except:
+        db.rollback()
+        raise
+
+    return quiz
