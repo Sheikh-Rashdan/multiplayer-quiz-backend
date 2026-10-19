@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 
 import storage.question as storage
 from database.db import get_db
-from database.models import Question, Quiz
+from database.models import Question, Quiz, User
 from models.question import QuestionCreate, QuestionModel, QuestionPatch
-from routers.quiz import validate_quiz
+from routers.quiz import validate_quiz, validate_quiz_belongs_to_user
+from routers.user import get_current_user
 
-question_router = APIRouter(prefix="/quiz/{quiz_id}/questions", tags=["question"])
+question_router = APIRouter(prefix="/quizzes/{quiz_id}/questions", tags=["question"])
 
 
 def validate_question(question_id: int, db: Session = Depends(get_db)):
@@ -59,8 +60,10 @@ def get_question(
 def post_question(
     question_create: QuestionCreate,
     quiz: Quiz = Depends(validate_quiz),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    validate_quiz_belongs_to_user(quiz, user)
     validate_index_within_bounds(question_create.answer_index, question_create.options)
 
     create_dict = question_create.model_dump()
@@ -72,8 +75,10 @@ def post_question(
 def delete_question(
     question: Question = Depends(validate_question),
     quiz: Quiz = Depends(validate_quiz),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    validate_quiz_belongs_to_user(quiz, user)
     validate_question_belongs_to_quiz(question, quiz)
     return storage.delete_question(db, question)
 
@@ -83,8 +88,10 @@ def patch_question(
     question_patch: QuestionPatch,
     question: Question = Depends(validate_question),
     quiz: Quiz = Depends(validate_quiz),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    validate_quiz_belongs_to_user(quiz, user)
     validate_question_belongs_to_quiz(question, quiz)
 
     answer_index = question_patch.answer_index
