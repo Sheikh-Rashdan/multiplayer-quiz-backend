@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String
-from sqlalchemy.dialects.sqlite import JSONB
+from datetime import datetime
+
+from sqlalchemy import ForeignKey, String, func
+from sqlalchemy.dialects.sqlite import JSONB, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from utils.room_code import get_unique_room_code
 
 
 class Base(DeclarativeBase):
@@ -19,6 +23,34 @@ class User(Base):
     quizzes: Mapped[list[Quiz]] = relationship(
         back_populates="author", cascade="all, delete-orphan"
     )
+    rooms: Mapped[list[Room]] = relationship(
+        back_populates="host", cascade="all, delete-orphan"
+    )
+
+
+class Room(Base):
+    __tablename__ = "rooms"
+
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, insert_default=get_unique_room_code
+    )
+    host_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    quiz_id: Mapped[int] = mapped_column(
+        ForeignKey("quizzes.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String, nullable=False, default="waiting")
+    player_ids: Mapped[list[int]] = mapped_column(
+        JSONB, nullable=False, insert_default=list
+    )
+    question_index: Mapped[int] = mapped_column(nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, insert_default=datetime.now
+    )
+
+    host: Mapped[User] = relationship(back_populates="rooms")
+    quiz: Mapped[Quiz] = relationship(back_populates="rooms")
 
 
 class Quiz(Base):
@@ -33,6 +65,9 @@ class Quiz(Base):
     author: Mapped[User] = relationship(back_populates="quizzes")
 
     questions: Mapped[list[Question]] = relationship(
+        back_populates="quiz", cascade="all, delete-orphan"
+    )
+    rooms: Mapped[list[Room]] = relationship(
         back_populates="quiz", cascade="all, delete-orphan"
     )
 
