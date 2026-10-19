@@ -19,4 +19,4 @@ class QuizCreate(BaseModel):
 
 class QuizModel(QuizCreate):
     id: int = Field(ge=0)
-    author_id: str = Field(min_length=1)
+    author_id: int = Field(ge=1)

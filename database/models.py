@@ -27,7 +27,7 @@ class Quiz(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
 
-    author_id: Mapped[str] = mapped_column(
+    author_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     author: Mapped[User] = relationship(back_populates="quizzes")
