@@ -35,3 +35,17 @@ def get_quiz(quiz: Quiz = Depends(validate_quiz)):
 @quiz_router.post("", status_code=201, response_model=QuizModel)
 def post_quiz(quiz_create: QuizCreate, db: Session = Depends(get_db)):
     return storage.post_quiz(db, quiz_create.model_dump())
+
+
+@quiz_router.delete("/{quiz_id}", status_code=204)
+def delete_quiz(quiz: Quiz = Depends(validate_quiz), db: Session = Depends(get_db)):
+    return storage.delete_quiz(db, quiz)
+
+
+@quiz_router.patch("/{quiz_id}", response_model=QuizModel)
+def patch_quiz(
+    quiz_patch: QuizPatch,
+    quiz: Quiz = Depends(validate_quiz),
+    db: Session = Depends(get_db),
+):
+    return storage.patch_quiz(db, quiz, quiz_patch.model_dump(exclude_unset=True))
