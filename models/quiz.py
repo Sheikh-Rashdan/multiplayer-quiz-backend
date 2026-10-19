@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field, model_validator
 
 class QuizPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1)
-    author: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def validate_non_nullable_fields(self):
@@ -16,8 +15,8 @@ class QuizPatch(BaseModel):
 
 class QuizCreate(BaseModel):
     name: str = Field(min_length=1)
-    author: str | None = Field(default=None, min_length=1)
 
 
 class QuizModel(QuizCreate):
     id: int = Field(ge=0)
+    author_id: str = Field(min_length=1)
