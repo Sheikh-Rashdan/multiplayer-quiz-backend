@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from database.db import init_db
 from routers.question import question_router
 from routers.quiz import quiz_router
+from routers.room import room_router
 from routers.user import user_router
 
 
@@ -18,6 +19,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(user_router)
 app.include_router(quiz_router)
 app.include_router(question_router)
+app.include_router(room_router)
 
 
 @app.get("/")

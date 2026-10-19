@@ -1,0 +1,39 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+import storage.room as storage
+from database.db import get_db
+from database.models import Quiz, Room, User
+from models.room import RoomCreate, RoomModel
+from routers.quiz import validate_quiz, validate_quiz_belongs_to_user
+from routers.user import get_current_user
+
+room_router = APIRouter(prefix="/rooms", tags=["room"])
+
+
+def validate_room(room_id: str, db: Session = Depends(get_db)):
+    room: Room | None = storage.get_room(db, room_id)
+
+    if room is None:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    return room
+
+
+@room_router.get("/{room_id}", response_model=RoomModel)
+def get_room(room: Room = Depends(validate_room)):
+    return room
+
+
+@room_router.post("", status_code=201, response_model=RoomModel)
+def post_room(
+    room_create: RoomCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    quiz: Quiz = validate_quiz(room_create.quiz_id, db)
+    validate_quiz_belongs_to_user(quiz, user)
+
+    create_dict = room_create.model_dump()
+    create_dict["host_id"] = user.id
+    return storage.post_room(db, create_dict)
