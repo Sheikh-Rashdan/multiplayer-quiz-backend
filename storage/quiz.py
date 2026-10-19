@@ -11,6 +11,11 @@ def get_quizzes(db: Session, limit: int, offset: int) -> list[Quiz]:
     return db.scalars(statement).all()
 
 
+def get_quiz(db: Session, quiz_id: int) -> Quiz | None:
+    statement = select(Quiz).where(Quiz.id == quiz_id)
+    return db.scalar(statement)
+
+
 def post_quiz(db: Session, create_dict: dict[str, Any]) -> Quiz:
     quiz = Quiz(**create_dict)
 
