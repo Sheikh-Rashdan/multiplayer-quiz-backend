@@ -6,7 +6,7 @@ from database.db import get_db
 from database.models import Quiz
 from models.quiz import QuizCreate, QuizModel, QuizPatch
 
-quiz_router = APIRouter(prefix="/quiz", tags=["quiz"])
+quiz_router = APIRouter(prefix="/quizzes", tags=["quiz"])
 
 
 def validate_quiz(quiz_id: int, db: Session = Depends(get_db)):
