@@ -1,3 +1,6 @@
+import secrets
+from string import ascii_uppercase
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -11,8 +14,12 @@ from routers.user import get_current_user
 room_router = APIRouter(prefix="/rooms", tags=["room"])
 
 
-def validate_room(room_id: str, db: Session = Depends(get_db)):
-    room: Room | None = storage.get_room(db, room_id)
+def validate_optional_room(room_id: str, db: Session = Depends(get_db)) -> Room | None:
+    return storage.get_room(db, room_id)
+
+
+def validate_room(room_id: str, db: Session = Depends(get_db)) -> Room:
+    room: Room | None = validate_optional_room(room_id, db)
 
     if room is None:
         raise HTTPException(status_code=404, detail="room not found")
@@ -36,4 +43,18 @@ def post_room(
 
     create_dict = room_create.model_dump()
     create_dict["host_id"] = user.id
+
+    code = generate_unique_code(db)
+    create_dict["id"] = code
     return storage.post_room(db, create_dict)
+
+
+def generate_unique_code(db: Session):
+    while True:
+        code = ""
+        for _ in range(5):
+            code += secrets.choice(ascii_uppercase)
+
+        room: Room | None = validate_optional_room(code, db)
+        if room is None:
+            return code
