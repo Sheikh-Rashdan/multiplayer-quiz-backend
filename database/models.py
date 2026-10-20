@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, func
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.sqlite import JSONB, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-from utils.room_code import get_unique_room_code
 
 
 class Base(DeclarativeBase):
@@ -31,9 +29,7 @@ class User(Base):
 class Room(Base):
     __tablename__ = "rooms"
 
-    id: Mapped[str] = mapped_column(
-        String, primary_key=True, insert_default=get_unique_room_code
-    )
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     host_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
