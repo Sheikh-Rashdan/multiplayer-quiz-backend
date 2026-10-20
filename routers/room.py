@@ -1,7 +1,13 @@
 import secrets
 from string import ascii_uppercase
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from sqlalchemy.orm import Session
 
 import storage.room as storage
@@ -10,6 +16,7 @@ from database.models import Quiz, Room, User
 from models.room import RoomCreate, RoomModel
 from routers.quiz import validate_quiz, validate_quiz_belongs_to_user
 from routers.user import get_current_user
+from websocket_handler.connections import websocket_connections
 
 room_router = APIRouter(prefix="/rooms", tags=["room"])
 
@@ -58,3 +65,19 @@ def generate_unique_code(db: Session):
         room: Room | None = validate_optional_room(code, db)
         if room is None:
             return code
+
+
+@room_router.websocket("/{room_id}")
+async def websocket_connection(
+    websocket: WebSocket, room: Room = Depends(validate_optional_room)
+):
+    await websocket_connections.connect(room and room.id, websocket)
+    if room is None:
+        return
+
+    try:
+        while True:
+            await websocket.receive_json()
+    except WebSocketDisconnect:
+        websocket_connections.disconnect(room.id, websocket)
+        print(f"{websocket.client} disconnected")
