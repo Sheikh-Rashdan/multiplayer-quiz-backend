@@ -97,7 +97,7 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
 
     message_type: str = message.get("type")
     if message_type is None:
-        return
+        return {"send_to": "this", "type": "error", "error": "missing type"}
 
     match message_type:
         case "status":
@@ -109,6 +109,7 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
                 "status": f"{websocket.client.host} says hi!",
             }
 
+    return {"send_to": "this", "type": "error", "error": "invalid type"}
 
 
 def perform_database_operation(operation: Callable, **params) -> Any:
