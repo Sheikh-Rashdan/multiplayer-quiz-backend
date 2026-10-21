@@ -20,6 +20,7 @@ from routers.quiz import validate_quiz, validate_quiz_belongs_to_user
 from routers.user import get_current_user
 from websocket_handler.connections import (
     handle_websocket_message,
+    perform_database_operation,
     websocket_connections,
 )
 
@@ -87,6 +88,17 @@ async def websocket_connection(
     await websocket_connections.connect(room and room.id, websocket)
     if room is None:
         return
+
+    lock: asyncio.Lock = websocket_connections.get_lock(room_id)
+
+    if not is_host:
+        async with lock:
+            await run_in_threadpool(
+                perform_database_operation,
+                operation=storage.add_player,
+                room_id=room_id,
+                player_id=user_id,
+            )
 
     try:
         while True:
