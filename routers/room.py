@@ -74,8 +74,16 @@ def generate_unique_code(db: Session):
 
 @room_router.websocket("/{room_id}")
 async def websocket_connection(
-    websocket: WebSocket, room: Room = Depends(validate_optional_room)
+    websocket: WebSocket,
+    room: Room = Depends(validate_optional_room),
+    user: User = Depends(get_current_user),
 ):
+    room_exists = room is not None
+    room_id = room.id if room_exists else None
+    user_id = user.id
+    is_host = (room.host_id == user_id) if room_exists else False
+    host_id = user_id if is_host else None
+
     await websocket_connections.connect(room and room.id, websocket)
     if room is None:
         return
@@ -95,5 +103,5 @@ async def websocket_connection(
                     await websocket_connections.multicast(response, room.id, user_id)
 
     except WebSocketDisconnect:
-        websocket_connections.disconnect(room.id, websocket)
+        await websocket_connections.disconnect(room.id, websocket, user_id)
         print(f"{websocket.client} disconnected")
