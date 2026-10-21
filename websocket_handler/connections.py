@@ -18,18 +18,24 @@ class WebSocketConnections:
         websocket: WebSocket,
         host_id: int | None,
         quiz_started: bool,
+        duplicate_user_id: bool,
     ) -> None:
         await websocket.accept()
 
         if room_id is None:
             raise WebSocketException(
                 code=status.WS_1008_POLICY_VIOLATION,
-                reason="room_id does not exist",
+                reason="room does not exist",
             )
         if quiz_started:
             raise WebSocketException(
                 code=status.WS_1008_POLICY_VIOLATION,
                 reason="quiz already in progress",
+            )
+        if duplicate_user_id:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="user already in room",
             )
 
         if host_id is not None:
