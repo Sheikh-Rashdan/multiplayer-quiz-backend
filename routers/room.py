@@ -84,8 +84,9 @@ async def websocket_connection(
     user_id = user.id
     is_host = (room.host_id == user_id) if room_exists else False
     host_id = user_id if is_host else None
+    quiz_started = room.status == "ongoing" if room_exists else False
 
-    await websocket_connections.connect(room_id, websocket, host_id)
+    await websocket_connections.connect(room_id, websocket, host_id, quiz_started)
     if room is None:
         return
 

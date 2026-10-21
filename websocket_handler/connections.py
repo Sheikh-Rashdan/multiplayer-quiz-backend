@@ -12,7 +12,11 @@ class WebSocketConnections:
         self.connections: dict[str, RoomConnection] = {}
 
     async def connect(
-        self, room_id: str | None, websocket: WebSocket, host_id: int | None = None
+        self,
+        room_id: str | None,
+        websocket: WebSocket,
+        host_id: int | None,
+        quiz_started: bool,
     ) -> None:
         await websocket.accept()
 
@@ -20,6 +24,11 @@ class WebSocketConnections:
             raise WebSocketException(
                 code=status.WS_1008_POLICY_VIOLATION,
                 reason="room_id does not exist",
+            )
+        if quiz_started:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="quiz already in progress",
             )
 
         if host_id is not None:
