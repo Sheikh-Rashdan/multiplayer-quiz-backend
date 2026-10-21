@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
 
@@ -109,6 +110,7 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
             }
 
 
-def perform_database_operation(operation: Callable, **params) -> None:
+
+def perform_database_operation(operation: Callable, **params) -> Any:
     with SessionLocal() as db:
-        operation(db, **params)
+        return operation(db, **params)
