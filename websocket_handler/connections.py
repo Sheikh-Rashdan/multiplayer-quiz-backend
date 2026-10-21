@@ -52,3 +52,20 @@ class RoomConnection:
 
 
 websocket_connections = WebSocketConnections()
+
+
+def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
+
+    message_type: str = message.get("type")
+    if message_type is None:
+        return
+
+    match message_type:
+        case "status":
+            return {"send_to": "this", "type": "status", "status": "online"}
+        case "hello":
+            return {
+                "send_to": "room",
+                "type": "hello",
+                "status": f"{websocket.client.host} says hi!",
+            }
