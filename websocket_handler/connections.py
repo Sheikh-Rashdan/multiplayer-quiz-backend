@@ -16,7 +16,8 @@ class WebSocketConnections:
         self,
         room_id: str | None,
         websocket: WebSocket,
-        host_id: int | None,
+        user_id: int | None,
+        is_host: bool,
         quiz_started: bool,
         duplicate_user_id: bool,
     ) -> None:
@@ -38,8 +39,15 @@ class WebSocketConnections:
                 reason="user already in room",
             )
 
-        if host_id is not None:
-            self.connections[room_id] = RoomConnection(host_id)
+        if is_host:
+            self.connections[room_id] = RoomConnection(user_id)
+        else:
+            player_ids = perform_database_operation(
+                operation=storage.add_player, room_id=room_id, player_id=user_id
+            )
+
+            response = {"type": "player_joined", "player_ids": player_ids}
+            await websocket_connections.multicast(response, room_id, user_id)
 
         room_connection: RoomConnection | None = self.connections.get(room_id)
         if room_connection is None:
@@ -50,7 +58,7 @@ class WebSocketConnections:
 
     async def disconnect(
         self, room_id: str, websocket: WebSocket, user_id: int | None = None
-    ) -> list[int] | None:
+    ) -> None:
         room_connection: RoomConnection | None = self.connections.get(room_id)
         if room_connection is not None and websocket in room_connection.websockets:
             player_ids = perform_database_operation(
@@ -58,6 +66,10 @@ class WebSocketConnections:
             )
 
             room_connection.websockets.remove(websocket)
+
+            if player_ids is not None:
+                response = {"type": "player_left", "player_ids": player_ids}
+                await websocket_connections.multicast(response, room_id, user_id)
 
             if room_connection.host_id == user_id:
                 await self.disconnect_all(room_id)
@@ -87,13 +99,7 @@ class WebSocketConnections:
                 try:
                     await websocket.send_json(data)
                 except WebSocketDisconnect:
-                    player_ids = await self.disconnect(room_id, websocket, user_id)
-
-                    if player_ids is None:
-                        return
-
-                    response = {"type": "player_left", "player_ids": player_ids}
-                    await websocket_connections.multicast(response, room_id, user_id)
+                    await self.disconnect(room_id, websocket, user_id)
 
     async def multicast(
         self, data: dict, room_id: int, user_id: int | None = None
@@ -106,13 +112,7 @@ class WebSocketConnections:
             try:
                 await websocket.send_json(data)
             except WebSocketDisconnect:
-                player_ids = await self.disconnect(room_id, websocket, user_id)
-
-                if player_ids is None:
-                    return
-
-                response = {"type": "player_left", "player_ids": player_ids}
-                await websocket_connections.multicast(response, room_id, user_id)
+                await self.disconnect(room_id, websocket, user_id)
 
     def get_lock(self, room_id: int) -> asyncio.Lock:
         room_connection: RoomConnection | None = self.connections.get(room_id)

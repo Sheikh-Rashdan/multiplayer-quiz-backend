@@ -83,28 +83,16 @@ async def websocket_connection(
     room_id = room.id if room_exists else None
     user_id = user.id
     is_host = (room.host_id == user_id) if room_exists else False
-    host_id = user_id if is_host else None
     quiz_started = room.status == "ongoing" if room_exists else False
     duplicate_user_id = (user_id in room.player_ids) if room_exists else False
 
     await websocket_connections.connect(
-        room_id, websocket, host_id, quiz_started, duplicate_user_id
+        room_id, websocket, user_id, is_host, quiz_started, duplicate_user_id
     )
     if room is None:
         return
 
     lock: asyncio.Lock = websocket_connections.get_lock(room_id)
-
-    if not is_host:
-        async with lock:
-            player_ids = await run_in_threadpool(
-                perform_database_operation,
-                operation=storage.add_player,
-                room_id=room_id,
-                player_id=user_id,
-            )
-        response = {"type": "player_joined", "player_ids": player_ids}
-        await websocket_connections.multicast(response, room_id, user_id)
 
     try:
         while True:
@@ -181,12 +169,4 @@ async def websocket_connection(
                     await websocket_connections.multicast(response, room.id, user_id)
 
     except WebSocketDisconnect:
-        player_ids = await websocket_connections.disconnect(room.id, websocket, user_id)
-
-        if player_ids is None:
-            return
-
-        response = {"type": "player_left", "player_ids": player_ids}
-        await websocket_connections.multicast(response, room_id, user_id)
-
-        print(f"{websocket.client} disconnected")
+        await websocket_connections.disconnect(room.id, websocket, user_id)
