@@ -1,4 +1,9 @@
+import asyncio
+from collections.abc import Callable
+
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
+
+from database.db import SessionLocal
 
 
 class WebSocketConnections:
@@ -100,3 +105,8 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
                 "type": "hello",
                 "status": f"{websocket.client.host} says hi!",
             }
+
+
+def perform_database_operation(operation: Callable, **params) -> None:
+    with SessionLocal() as db:
+        operation(db, **params)
