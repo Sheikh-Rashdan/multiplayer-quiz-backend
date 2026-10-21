@@ -3,7 +3,7 @@ from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
 
 class WebSocketConnections:
     def __init__(self):
-        self.connections: dict[str, list[WebSocket]] = {}
+        self.connections: dict[str, RoomConnection] = {}
 
     async def connect(self, room_id: str | None, websocket: WebSocket):
         await websocket.accept()
@@ -17,31 +17,62 @@ class WebSocketConnections:
         self.connections.setdefault(room_id, [])
         self.connections[room_id].append(websocket)
 
-    def disconnect(self, room_id: str, websocket: WebSocket):
-        room_connections: list[WebSocket] = self.connections.get(room_id)
-        if room_connections is not None and websocket in room_connections:
-            room_connections.remove(websocket)
-            if len(room_connections) == 0:
+        room_connection: RoomConnection | None = self.connections.get(room_id)
+        if room_connection is None:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION, reason="host not connected"
+            )
+        room_connection.websockets.append(websocket)
+
+    async def disconnect(
+        self, room_id: str, websocket: WebSocket, user_id: int | None = None
+    ) -> None:
+        room_connection: RoomConnection | None = self.connections.get(room_id)
+        if room_connection is not None and websocket in room_connection.websockets:
+            room_connection.websockets.remove(websocket)
+
+            if room_connection.host_id == user_id:
+                await self.disconnect_all(room_id)
+            elif len(room_connection.websockets) == 0:
                 del self.connections[room_id]
 
-    async def broadcast(self, data):
-        for room_id, room_connections in self.connections.items():
-            for websocket in room_connections.copy():
+    async def disconnect_all(self, room_id: str):
+        room_connection: RoomConnection | None = self.connections.get(room_id)
+        if room_connection is not None:
+            for websocket in room_connection.websockets.copy():
+                await websocket.close(
+                    code=status.WS_1001_GOING_AWAY, reason="host disconnected"
+                )
+                room_connection.websockets.remove(websocket)
+
+        del self.connections[room_id]
+
+    async def broadcast(self, data: dict, user_id: int | None = None) -> None:
+        for room_id, room_connection in self.connections.items():
+            for websocket in room_connection.websockets.copy():
                 try:
                     await websocket.send_json(data)
                 except WebSocketDisconnect:
-                    self.disconnect(room_id, websocket)
+                    await self.disconnect(room_id, websocket, user_id)
 
-    async def multicast(self, data, room_id):
-        room_connections: list[WebSocket] = self.connections.get(room_id)
-        if room_connections is None:
+    async def multicast(
+        self, data: dict, room_id: int, user_id: int | None = None
+    ) -> None:
+        room_connection: RoomConnection | None = self.connections.get(room_id)
+        if room_connection is None:
             return
 
-        for websocket in room_connections.copy():
+        for websocket in room_connection.websockets.copy():
             try:
                 await websocket.send_json(data)
             except WebSocketDisconnect:
-                self.disconnect(room_id, websocket)
+                await self.disconnect(room_id, websocket, user_id)
+
+    def get_lock(self, room_id: int) -> asyncio.Lock:
+        room_connection: RoomConnection | None = self.connections.get(room_id)
+        if room_connection is None:
+            raise ValueError(f"Invalid room_id {room_id}")
+        return room_connection.lock
 
 
 class RoomConnection:
