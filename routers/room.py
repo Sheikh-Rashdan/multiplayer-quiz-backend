@@ -137,7 +137,13 @@ async def websocket_connection(
                                 operation=storage.next_question,
                                 room_id=room_id,
                             )
-                        if question_index >= 0:
+                        if question_index is None:
+                            response = {
+                                "send_to": "this",
+                                "type": "error",
+                                "error": "quiz is not ongoing",
+                            }
+                        elif question_index >= 0:
                             response["question_index"] = question_index
                         else:
                             response = {
