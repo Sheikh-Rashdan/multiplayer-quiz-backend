@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from database.models import Room
@@ -24,6 +24,17 @@ def post_room(db: Session, create_dict: dict[str, Any]) -> Room:
         raise
 
     return room
+
+
+def delete_room(db: Session, room_id: int) -> None:
+    statement = delete(Room).where(Room.id == room_id)
+    db.execute(statement)
+
+    try:
+        db.commit()
+    except:
+        db.rollback()
+        raise
 
 
 def add_player(db: Session, room_id: int, player_id: int) -> Room:
