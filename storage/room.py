@@ -37,7 +37,7 @@ def delete_room(db: Session, room_id: int) -> None:
         raise
 
 
-def add_player(db: Session, room_id: int, player_id: int) -> Room:
+def add_player(db: Session, room_id: int, player_id: int) -> list[int]:
     room = get_room(db, room_id)
     room.player_ids = list(set(room.player_ids + [player_id]))
 
@@ -51,7 +51,7 @@ def add_player(db: Session, room_id: int, player_id: int) -> Room:
     return room.player_ids
 
 
-def remove_player(db: Session, room_id: int, player_id: int) -> Room:
+def remove_player(db: Session, room_id: int, player_id: int) -> list[int]:
     room = get_room(db, room_id)
 
     if player_id not in room.player_ids:
