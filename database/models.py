@@ -8,7 +8,13 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
-    pass
+    def __repr__(self) -> str:
+        attrs = ", ".join(
+            f"{key}={value}"
+            for key, value in self.__dict__.items()
+            if not key.startswith("_")
+        )
+        return f"{self.__class__.__name__}({attrs})"
 
 
 class User(Base):
