@@ -44,4 +44,11 @@ class WebSocketConnections:
                 self.disconnect(room_id, websocket)
 
 
+class RoomConnection:
+    def __init__(self, host_id):
+        self.host_id: int = host_id
+        self.websockets: list[WebSocket] = []
+        self.lock = asyncio.Lock()
+
+
 websocket_connections = WebSocketConnections()
