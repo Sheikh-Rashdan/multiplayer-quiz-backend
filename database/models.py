@@ -54,6 +54,17 @@ class Room(Base):
     host: Mapped[User] = relationship(back_populates="rooms")
     quiz: Mapped[Quiz] = relationship(back_populates="rooms")
 
+    def to_json(self):
+        return {
+            "id": self.id,
+            "host_id": self.host_id,
+            "quiz_id": self.quiz_id,
+            "status": self.status,
+            "player_ids": self.player_ids,
+            "question_index": self.question_index,
+            "created_at": self.created_at.timestamp(),
+        }
+
 
 class Quiz(Base):
     __tablename__ = "quizzes"
