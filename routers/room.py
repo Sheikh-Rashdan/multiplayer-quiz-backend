@@ -178,5 +178,12 @@ async def websocket_connection(
                     await websocket_connections.multicast(response, room.id, user_id)
 
     except WebSocketDisconnect:
-        await websocket_connections.disconnect(room.id, websocket, user_id)
+        player_ids = await websocket_connections.disconnect(room.id, websocket, user_id)
+
+        if player_ids is None:
+            return
+
+        response = {"type": "player_left", "player_ids": player_ids}
+        await websocket_connections.multicast(response, room_id, user_id)
+
         print(f"{websocket.client} disconnected")
