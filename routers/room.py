@@ -94,12 +94,14 @@ async def websocket_connection(
 
     if not is_host:
         async with lock:
-            await run_in_threadpool(
+            player_ids = await run_in_threadpool(
                 perform_database_operation,
                 operation=storage.add_player,
                 room_id=room_id,
                 player_id=user_id,
             )
+        response = {"type": "player_joined", "player_ids": player_ids}
+        await websocket_connections.multicast(response, room_id, user_id)
 
     try:
         while True:
