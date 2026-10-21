@@ -1,11 +1,18 @@
 from datetime import UTC, datetime, timedelta
+from os import getenv
 
 import bcrypt
+from dotenv import load_dotenv
 from fastapi import HTTPException
 from jose import JWTError, jwt
 
-SECRET_KEY = "TESTING"
+load_dotenv()
+
+SECRET_KEY = getenv("SECRET_KEY")
 ALGORITHM = "HS256"
+
+if SECRET_KEY is None:
+    raise ValueError(".env does not contain SECRET_KEY")
 
 
 def hash_password(password: str) -> str:
