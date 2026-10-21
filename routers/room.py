@@ -107,6 +107,9 @@ async def websocket_connection(
                 handle_websocket_message, websocket=websocket, message=message
             )
 
+            response_type: str = response.get("type")
+            if response_type is None:
+                raise ValueError("response must have a type")
 
             match response_type:
                 case "update":
