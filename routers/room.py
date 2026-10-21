@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 from string import ascii_uppercase
 
@@ -8,6 +9,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 import storage.room as storage
@@ -16,7 +18,10 @@ from database.models import Quiz, Room, User
 from models.room import RoomCreate, RoomModel
 from routers.quiz import validate_quiz, validate_quiz_belongs_to_user
 from routers.user import get_current_user
-from websocket_handler.connections import websocket_connections
+from websocket_handler.connections import (
+    handle_websocket_message,
+    websocket_connections,
+)
 
 room_router = APIRouter(prefix="/rooms", tags=["room"])
 
@@ -77,7 +82,18 @@ async def websocket_connection(
 
     try:
         while True:
-            await websocket.receive_json()
+            message: dict = await websocket.receive_json()
+            response = await run_in_threadpool(
+                handle_websocket_message, websocket=websocket, message=message
+            )
+
+            send_to = response.pop("send_to")
+            match send_to:
+                case "this":
+                    await websocket.send_json(response)
+                case "room":
+                    await websocket_connections.multicast(response, room.id, user_id)
+
     except WebSocketDisconnect:
         websocket_connections.disconnect(room.id, websocket)
         print(f"{websocket.client} disconnected")
