@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
 
+import storage.room as storage
 from database.db import SessionLocal
 
 
@@ -63,6 +64,8 @@ class WebSocketConnections:
                 room_connection.websockets.remove(websocket)
 
         del self.connections[room_id]
+
+        perform_database_operation(operation=storage.delete_room, room_id=room_id)
 
     async def broadcast(self, data: dict, user_id: int | None = None) -> None:
         for room_id, room_connection in self.connections.items():
