@@ -100,8 +100,8 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
         return {"send_to": "this", "type": "error", "error": "missing type"}
 
     match message_type:
-        case "status":
-            return {"send_to": "this", "type": "status", "status": "online"}
+        case "update":
+            return {"send_to": "this", "type": "update", "room": None}
         case "hello":
             return {
                 "send_to": "room",

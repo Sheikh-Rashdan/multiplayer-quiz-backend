@@ -107,6 +107,17 @@ async def websocket_connection(
                 handle_websocket_message, websocket=websocket, message=message
             )
 
+
+            match response_type:
+                case "update":
+                    async with lock:
+                        room = await run_in_threadpool(
+                            perform_database_operation,
+                            operation=storage.get_room,
+                            room_id=room_id,
+                        )
+                    response["room"] = room.to_json()
+
             send_to = response.pop("send_to")
             match send_to:
                 case "this":
