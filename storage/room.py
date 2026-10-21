@@ -38,3 +38,22 @@ def add_player(db: Session, room_id: int, player_id: int) -> Room:
         raise
 
     return room
+
+
+def next_question(db: Session, room_id: int) -> int:
+    room = get_room(db, room_id)
+    max_question_index = len(room.quiz.questions)
+
+    if room.question_index >= max_question_index:
+        room.question_index = -1
+    else:
+        room.question_index += 1
+
+    try:
+        db.commit()
+        db.refresh(room)
+    except:
+        db.rollback()
+        raise
+
+    return room.question_index
