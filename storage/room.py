@@ -57,3 +57,21 @@ def next_question(db: Session, room_id: int) -> int:
         raise
 
     return room.question_index
+
+
+def start_quiz(db: Session, room_id: int) -> str:
+    room = get_room(db, room_id)
+
+    if room.status != "waiting" or len(room.player_ids) == 0:
+        return None
+
+    room.status = "ongoing"
+
+    try:
+        db.commit()
+        db.refresh(room)
+    except:
+        db.rollback()
+        raise
+
+    return room.status
