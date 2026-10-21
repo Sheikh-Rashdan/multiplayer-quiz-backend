@@ -120,6 +120,27 @@ async def websocket_connection(
                             room_id=room_id,
                         )
                     response["room"] = room.to_json()
+                case "next_question":
+                    if is_host:
+                        async with lock:
+                            question_index = await run_in_threadpool(
+                                perform_database_operation,
+                                operation=storage.next_question,
+                                room_id=room_id,
+                            )
+                        if question_index >= 0:
+                            response["question_index"] = question_index
+                        else:
+                            response = {
+                                "send_to": "room",
+                                "type": "end_quiz",
+                            }
+                    else:
+                        response = {
+                            "send_to": "this",
+                            "type": "error",
+                            "error": "only host can control the room",
+                        }
 
             send_to = response.pop("send_to")
             match send_to:
