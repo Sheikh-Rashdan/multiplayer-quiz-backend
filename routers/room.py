@@ -149,6 +149,7 @@ async def websocket_connection(
                             response = {
                                 "send_to": "room",
                                 "type": "end_quiz",
+                                "status": "finished",
                             }
                     else:
                         response = host_control_error

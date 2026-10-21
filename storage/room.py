@@ -80,6 +80,7 @@ def next_question(db: Session, room_id: int) -> int:
 
     if room.question_index >= max_question_index:
         room.question_index = -1
+        room.status = "finished"
     else:
         room.question_index += 1
 
