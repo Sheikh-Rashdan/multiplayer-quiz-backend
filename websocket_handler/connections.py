@@ -108,6 +108,12 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
                 "type": "next_question",
                 "question_index": None,
             }
+        case "start_quiz":
+            return {
+                "send_to": "room",
+                "type": "start_quiz",
+                "status": "ongoing",
+            }
 
     return {"send_to": "this", "type": "error", "error": "invalid type"}
 

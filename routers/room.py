@@ -111,6 +111,12 @@ async def websocket_connection(
             if response_type is None:
                 raise ValueError("response must have a type")
 
+            host_control_error = {
+                "send_to": "this",
+                "type": "error",
+                "error": "only host can control the room",
+            }
+
             match response_type:
                 case "update":
                     async with lock:
@@ -136,11 +142,23 @@ async def websocket_connection(
                                 "type": "end_quiz",
                             }
                     else:
-                        response = {
-                            "send_to": "this",
-                            "type": "error",
-                            "error": "only host can control the room",
-                        }
+                        response = host_control_error
+                case "start_quiz":
+                    if is_host:
+                        async with lock:
+                            status = await run_in_threadpool(
+                                perform_database_operation,
+                                operation=storage.start_quiz,
+                                room_id=room_id,
+                            )
+                        if status == None:
+                            response = {
+                                "send_to": "this",
+                                "type": "error",
+                                "error": "failed to start quiz",
+                            }
+                    else:
+                        response = host_control_error
 
             send_to = response.pop("send_to")
             match send_to:
