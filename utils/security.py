@@ -24,7 +24,6 @@ def create_access_token(user_id: int) -> dict[str, str]:
 def validate_access_token(token: str) -> bool:
     try:
         payload = jwt.decode(token, SECRET_KEY, [ALGORITHM])
-        print(payload)
         return int(payload.get("sub"))
     except JWTError, ValueError:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
