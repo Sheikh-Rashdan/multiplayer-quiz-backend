@@ -21,6 +21,8 @@ class WebSocketConnections:
         room_connections: list[WebSocket] = self.connections.get(room_id)
         if room_connections is not None and websocket in room_connections:
             room_connections.remove(websocket)
+            if len(room_connections) == 0:
+                del self.connections[room_id]
 
     async def broadcast(self, data):
         for room_id, room_connections in self.connections.items():
