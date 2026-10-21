@@ -17,7 +17,7 @@ def check_password(password: str, password_hash: str):
 
 
 def create_access_token(user_id: int) -> dict[str, str]:
-    data = {"sub": str(user_id), "exp": datetime.now(UTC) + timedelta(minutes=30)}
+    data = {"sub": str(user_id), "exp": datetime.now(UTC) + timedelta(days=3)}
     return jwt.encode(data, SECRET_KEY, ALGORITHM)
 
 
