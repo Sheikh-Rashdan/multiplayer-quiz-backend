@@ -24,3 +24,17 @@ def post_room(db: Session, create_dict: dict[str, Any]) -> Room:
         raise
 
     return room
+
+
+def add_player(db: Session, room_id: int, player_id: int) -> Room:
+    room = get_room(db, room_id)
+    room.player_ids = list(set(room.player_ids + [player_id]))
+
+    try:
+        db.commit()
+        db.refresh(room)
+    except:
+        db.rollback()
+        raise
+
+    return room
