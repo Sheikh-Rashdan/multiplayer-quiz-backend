@@ -10,7 +10,9 @@ class WebSocketConnections:
     def __init__(self):
         self.connections: dict[str, RoomConnection] = {}
 
-    async def connect(self, room_id: str | None, websocket: WebSocket):
+    async def connect(
+        self, room_id: str | None, websocket: WebSocket, host_id: int | None = None
+    ) -> None:
         await websocket.accept()
 
         if room_id is None:
@@ -19,8 +21,8 @@ class WebSocketConnections:
                 reason="room_id does not exist",
             )
 
-        self.connections.setdefault(room_id, [])
-        self.connections[room_id].append(websocket)
+        if host_id is not None:
+            self.connections[room_id] = RoomConnection(host_id)
 
         room_connection: RoomConnection | None = self.connections.get(room_id)
         if room_connection is None:
