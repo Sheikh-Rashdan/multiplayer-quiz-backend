@@ -19,7 +19,7 @@ from database.models import Quiz, Room, User
 from models.room import RoomCreate, RoomModel
 from routers.quiz import validate_quiz, validate_quiz_belongs_to_user
 from routers.user import get_current_user
-from websocket_handler.connections import (
+from utils.connections import (
     handle_websocket_message,
     perform_database_operation,
     websocket_connections,
