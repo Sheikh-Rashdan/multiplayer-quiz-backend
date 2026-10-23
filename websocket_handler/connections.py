@@ -41,7 +41,14 @@ class WebSocketConnections:
 
         if is_host:
             self.connections[room_id] = RoomConnection(user_id)
-        else:
+
+        room_connection: RoomConnection | None = self.connections.get(room_id)
+        if room_connection is None:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION, reason="host not connected"
+            )
+
+        if not is_host:
             player_ids = perform_database_operation(
                 operation=storage.add_player, room_id=room_id, player_id=user_id
             )
@@ -49,11 +56,6 @@ class WebSocketConnections:
             response = {"type": "player_joined", "player_ids": player_ids}
             await websocket_connections.multicast(response, room_id, user_id)
 
-        room_connection: RoomConnection | None = self.connections.get(room_id)
-        if room_connection is None:
-            raise WebSocketException(
-                code=status.WS_1008_POLICY_VIOLATION, reason="host not connected"
-            )
         room_connection.websockets.append(websocket)
 
     async def disconnect(
