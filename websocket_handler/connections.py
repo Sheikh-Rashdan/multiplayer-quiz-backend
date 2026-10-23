@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
+from starlette.websockets import WebSocketDisconnected
 
 import storage.room as storage
 from database.db import SessionLocal
@@ -100,7 +101,7 @@ class WebSocketConnections:
             for websocket in room_connection.websockets.copy():
                 try:
                     await websocket.send_json(data)
-                except WebSocketDisconnect:
+                except WebSocketDisconnect, WebSocketDisconnected:
                     await self.disconnect(room_id, websocket, user_id)
 
     async def multicast(
@@ -113,7 +114,7 @@ class WebSocketConnections:
         for websocket in room_connection.websockets.copy():
             try:
                 await websocket.send_json(data)
-            except WebSocketDisconnect:
+            except WebSocketDisconnect, WebSocketDisconnected:
                 await self.disconnect(room_id, websocket, user_id)
 
     def get_lock(self, room_id: int) -> asyncio.Lock:

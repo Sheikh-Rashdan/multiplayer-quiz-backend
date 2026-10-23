@@ -11,6 +11,7 @@ from fastapi import (
 )
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
+from starlette.websockets import WebSocketDisconnected
 
 import storage.room as storage
 from database.db import get_db
@@ -176,5 +177,5 @@ async def websocket_connection(
             if is_host and response_type == "end_session":
                 await websocket_connections.disconnect_all(room_id)
 
-    except WebSocketDisconnect:
+    except WebSocketDisconnect, WebSocketDisconnected:
         await websocket_connections.disconnect(room.id, websocket, user_id)
