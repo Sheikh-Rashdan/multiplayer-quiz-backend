@@ -119,7 +119,7 @@ class WebSocketConnections:
     def get_lock(self, room_id: int) -> asyncio.Lock:
         room_connection: RoomConnection | None = self.connections.get(room_id)
         if room_connection is None:
-            raise ValueError(f"Invalid room_id {room_id}")
+            raise ValueError(f"invalid room_id {room_id}")
         return room_connection.lock
 
 
