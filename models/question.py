@@ -25,4 +25,4 @@ class QuestionModel(BaseModel):
     id: int = Field(ge=0)
     quiz_id: int = Field(ge=0)
     question: str = Field(min_length=1)
-    options: list[str]
+    options: list[str] = Field(min_length=2)
