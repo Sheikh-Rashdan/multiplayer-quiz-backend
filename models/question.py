@@ -21,6 +21,8 @@ class QuestionCreate(BaseModel):
     answer_index: int = Field(ge=0)
 
 
-class QuestionModel(QuestionCreate):
+class QuestionModel(BaseModel):
     id: int = Field(ge=0)
     quiz_id: int = Field(ge=0)
+    question: str = Field(min_length=1)
+    options: list[str]
