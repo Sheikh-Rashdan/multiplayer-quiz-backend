@@ -160,6 +160,11 @@ async def websocket_connection(
                             }
                     else:
                         response = host_control_error
+                case "end_session":
+                    if not is_host:
+                        response = host_control_error
+                case _:
+                    raise ValueError("invalid response type")
 
             send_to = response.pop("send_to")
             match send_to:
@@ -167,6 +172,9 @@ async def websocket_connection(
                     await websocket.send_json(response)
                 case "room":
                     await websocket_connections.multicast(response, room.id, user_id)
+
+            if is_host and response_type == "end_session":
+                await websocket_connections.disconnect_all(room_id)
 
     except WebSocketDisconnect:
         await websocket_connections.disconnect(room.id, websocket, user_id)

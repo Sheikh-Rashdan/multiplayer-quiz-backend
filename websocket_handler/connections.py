@@ -154,6 +154,8 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
                 "type": "start_quiz",
                 "status": "ongoing",
             }
+        case "end_session":
+            return {"send_to": "room", "type": "end_session"}
 
     return {"send_to": "this", "type": "error", "error": "invalid type"}
 
