@@ -178,4 +178,4 @@ async def websocket_connection(
                 await websocket_connections.disconnect_all(room_id)
 
     except WebSocketDisconnect, WebSocketDisconnected:
-        await websocket_connections.disconnect(room.id, websocket, user_id)
+        await websocket_connections.disconnect(room.id, websocket)
