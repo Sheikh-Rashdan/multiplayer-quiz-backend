@@ -115,8 +115,6 @@ async def websocket_connection(
             )
 
             send_to = response.pop("send_to")
-            if send_to is None:
-                raise ValueError("response must have a send_to")
 
             host_control_error = {
                 "send_to": "this",
