@@ -39,7 +39,10 @@ def delete_room(db: Session, room_id: int) -> None:
 
 def add_player(db: Session, room_id: int, player_id: int) -> list[int]:
     room = get_room(db, room_id)
-    room.player_ids = list(set(room.player_ids + [player_id]))
+
+    player_ids_copy = room.player_ids.copy()
+    player_ids_copy.setdefault(str(player_id), 0)
+    room.player_ids = player_ids_copy
 
     try:
         db.commit()
@@ -53,12 +56,13 @@ def add_player(db: Session, room_id: int, player_id: int) -> list[int]:
 
 def remove_player(db: Session, room_id: int, player_id: int) -> list[int]:
     room = get_room(db, room_id)
+    player_id_str: str = str(player_id)
 
-    if player_id not in room.player_ids:
+    if player_id_str not in room.player_ids:
         return room.player_ids
 
     player_ids_copy = room.player_ids.copy()
-    player_ids_copy.remove(player_id)
+    player_ids_copy.pop(player_id_str)
     room.player_ids = player_ids_copy
 
     try:
