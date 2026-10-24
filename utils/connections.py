@@ -155,6 +155,25 @@ def handle_websocket_message(websocket: WebSocket, message: dict) -> None:
             }
         case "end_session":
             return {"send_to": "room", "type": "end_session"}
+        case "confirm_answer":
+            question_index: int | None = message.get("question_index")
+            answer_index: int | None = message.get("answer_index")
+
+            parameters = (question_index, answer_index)
+            failure = any(parameter is None for parameter in parameters)
+
+            if failure:
+                return {
+                    "send_to": "this",
+                    "type": "error",
+                    "error": "message must include question_index and answer_index",
+                }
+            return {
+                "send_to": "this",
+                "type": "confirm_answer",
+                "question_index": question_index,
+                "answer_index": answer_index,
+            }
 
     return {"send_to": "this", "type": "error", "error": "invalid type"}
 
