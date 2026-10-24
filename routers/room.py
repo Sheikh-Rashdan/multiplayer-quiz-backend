@@ -1,5 +1,6 @@
 import asyncio
 import secrets
+from json import JSONDecodeError
 from string import ascii_uppercase
 
 from fastapi import (
@@ -102,8 +103,14 @@ async def websocket_connection(
 
     try:
         while True:
-            message: dict = await websocket.receive_json()
-            response = await run_in_threadpool(
+            try:
+                message: dict = await websocket.receive_json()
+            except JSONDecodeError:
+                response: dict = {"type": "error", "error": "invalid json"}
+                await websocket.send_json(response)
+                continue
+
+            response: dict[str, str] = await run_in_threadpool(
                 handle_websocket_message, websocket=websocket, message=message
             )
 
