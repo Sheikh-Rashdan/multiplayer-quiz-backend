@@ -114,9 +114,9 @@ async def websocket_connection(
                 handle_websocket_message, websocket=websocket, message=message
             )
 
-            response_type: str = response.get("type")
-            if response_type is None:
-                raise ValueError("response must have a type")
+            send_to = response.pop("send_to")
+            if send_to is None:
+                raise ValueError("response must have a send_to")
 
             host_control_error = {
                 "send_to": "this",
@@ -124,70 +124,82 @@ async def websocket_connection(
                 "error": "only host can control the room",
             }
 
-            match response_type:
-                case "update":
-                    async with lock:
-                        room = await run_in_threadpool(
-                            perform_database_operation,
-                            operation=storage.get_room,
-                            room_id=room_id,
-                        )
-                    response["room"] = room.to_json()
-                case "next_question":
-                    if is_host:
+            if send_to == "none":
+                ...
+            else:
+                response_type: str = response.get("type")
+                if response_type is None:
+                    raise ValueError("response must have a type")
+
+                match response_type:
+                    case "update":
                         async with lock:
-                            question_index = await run_in_threadpool(
+                            room = await run_in_threadpool(
                                 perform_database_operation,
-                                operation=storage.next_question,
+                                operation=storage.get_room,
                                 room_id=room_id,
                             )
-                        if question_index is None:
-                            response = {
-                                "send_to": "this",
-                                "type": "error",
-                                "error": "quiz is not ongoing",
-                            }
-                        elif question_index >= 0:
-                            response["question_index"] = question_index
+                        response["room"] = room.to_json()
+                    case "next_question":
+                        if is_host:
+                            async with lock:
+                                question_index = await run_in_threadpool(
+                                    perform_database_operation,
+                                    operation=storage.next_question,
+                                    room_id=room_id,
+                                )
+                            if question_index is None:
+                                response = {
+                                    "send_to": "this",
+                                    "type": "error",
+                                    "error": "quiz is not ongoing",
+                                }
+                            elif question_index >= 0:
+                                response["question_index"] = question_index
+                            else:
+                                response = {
+                                    "send_to": "room",
+                                    "type": "end_quiz",
+                                    "status": "finished",
+                                }
                         else:
-                            response = {
-                                "send_to": "room",
-                                "type": "end_quiz",
-                                "status": "finished",
-                            }
-                    else:
-                        response = host_control_error
-                case "start_quiz":
-                    if is_host:
-                        async with lock:
-                            status = await run_in_threadpool(
-                                perform_database_operation,
-                                operation=storage.start_quiz,
-                                room_id=room_id,
-                            )
-                        if status == None:
-                            response = {
-                                "send_to": "this",
-                                "type": "error",
-                                "error": "failed to start quiz",
-                            }
-                    else:
-                        response = host_control_error
-                case "end_session":
-                    if not is_host:
-                        response = host_control_error
-                case _:
-                    raise ValueError("invalid response type")
+                            response = host_control_error
+                    case "start_quiz":
+                        if is_host:
+                            async with lock:
+                                status = await run_in_threadpool(
+                                    perform_database_operation,
+                                    operation=storage.start_quiz,
+                                    room_id=room_id,
+                                )
+                            if status == None:
+                                response = {
+                                    "send_to": "this",
+                                    "type": "error",
+                                    "error": "failed to start quiz",
+                                }
+                        else:
+                            response = host_control_error
+                    case "end_session":
+                        if not is_host:
+                            response = host_control_error
+                    case "error":
+                        ...
+                    case _:
+                        raise ValueError("invalid response type")
 
-            send_to = response.pop("send_to")
-            match send_to:
-                case "this":
-                    await websocket.send_json(response)
-                case "room":
-                    await websocket_connections.multicast(response, room.id, user_id)
+                match send_to:
+                    case "this":
+                        await websocket.send_json(response)
+                    case "room":
+                        await websocket_connections.multicast(
+                            response, room.id, user_id
+                        )
+                    case "_":
+                        raise ValueError("invalid send_to")
 
-            if is_host and response_type == "end_session":
-                await websocket_connections.disconnect_all(room_id)
+                if is_host and response_type == "end_session":
+                    await websocket_connections.disconnect_all(room_id)
 
     except WebSocketDisconnect, WebSocketDisconnected:
         await websocket_connections.disconnect(room.id, websocket)
