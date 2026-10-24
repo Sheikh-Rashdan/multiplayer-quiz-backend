@@ -62,7 +62,7 @@ def remove_player(db: Session, room_id: int, player_id: int) -> list[int]:
         return room.player_ids
 
     player_ids_copy = room.player_ids.copy()
-    player_ids_copy.pop(player_id_str)
+    player_ids_copy.pop(player_id_str, None)
     room.player_ids = player_ids_copy
 
     try:

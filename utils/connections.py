@@ -77,7 +77,7 @@ class WebSocketConnections:
                 return
 
             if len(room_connection.websockets) == 0:
-                del self.connections[room_id]
+                self.connections.pop(room_id, None)
 
             return player_ids
 
@@ -88,9 +88,9 @@ class WebSocketConnections:
                 await websocket.close(
                     code=status.WS_1001_GOING_AWAY, reason="host disconnected"
                 )
-                room_connection.websockets.pop(websocket)
+                room_connection.websockets.pop(websocket, None)
 
-        del self.connections[room_id]
+        self.connections.pop(room_id, None)
 
         perform_database_operation(operation=storage.delete_room, room_id=room_id)
 
