@@ -12,6 +12,6 @@ class RoomModel(BaseModel):
     host_id: int = Field(ge=1)
     quiz_id: int = Field(ge=1)
     status: str = Field(default="waiting", min_length=1)
-    player_ids: list[int] = Field(default_factory=list)
+    player_ids: dict[int, int] = Field(default_factory=dict)
     question_index: int = Field(default=0, ge=0)
     created_at: datetime

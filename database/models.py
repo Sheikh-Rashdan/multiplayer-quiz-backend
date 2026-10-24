@@ -43,8 +43,8 @@ class Room(Base):
         ForeignKey("quizzes.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[str] = mapped_column(String, nullable=False, default="waiting")
-    player_ids: Mapped[list[int]] = mapped_column(
-        JSONB, nullable=False, insert_default=list
+    player_ids: Mapped[dict[str, int]] = mapped_column(
+        JSONB, nullable=False, insert_default=dict
     )
     question_index: Mapped[int] = mapped_column(nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
