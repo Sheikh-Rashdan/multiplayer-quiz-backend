@@ -55,6 +55,11 @@ def post_room(
     quiz: Quiz = validate_quiz(room_create.quiz_id, db)
     validate_quiz_belongs_to_user(quiz, user)
 
+    if len(quiz.questions) == 0:
+        raise HTTPException(
+            status_code=409, detail=f"quiz_id {quiz.id} does not have any questions"
+        )
+
     create_dict = room_create.model_dump()
     create_dict["host_id"] = user.id
 
