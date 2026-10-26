@@ -122,82 +122,105 @@ async def websocket_connection(
                 "error": "only host can control the room",
             }
 
-            if send_to == "none":
-                ...
-            else:
-                response_type: str = response.get("type")
-                if response_type is None:
-                    raise ValueError("response must have a type")
+            response_type: str = response.get("type")
+            if response_type is None:
+                raise ValueError("response must have a type")
 
-                match response_type:
-                    case "update":
+            match response_type:
+                case "update":
+                    async with lock:
+                        room = await run_in_threadpool(
+                            perform_database_operation,
+                            operation=storage.get_room,
+                            room_id=room_id,
+                        )
+                    response["room"] = room.to_json()
+                case "next_question":
+                    if is_host:
                         async with lock:
-                            room = await run_in_threadpool(
+                            question_index = await run_in_threadpool(
                                 perform_database_operation,
-                                operation=storage.get_room,
+                                operation=storage.next_question,
                                 room_id=room_id,
                             )
-                        response["room"] = room.to_json()
-                    case "next_question":
-                        if is_host:
-                            async with lock:
-                                question_index = await run_in_threadpool(
-                                    perform_database_operation,
-                                    operation=storage.next_question,
-                                    room_id=room_id,
-                                )
-                            if question_index is None:
-                                response = {
-                                    "send_to": "this",
-                                    "type": "error",
-                                    "error": "quiz is not ongoing",
-                                }
-                            elif question_index >= 0:
-                                response["question_index"] = question_index
-                            else:
-                                response = {
-                                    "send_to": "room",
-                                    "type": "end_quiz",
-                                    "status": "finished",
-                                }
+                        if question_index is None:
+                            response = {
+                                "send_to": "this",
+                                "type": "error",
+                                "error": "quiz is not ongoing",
+                            }
+                        elif question_index >= 0:
+                            response["question_index"] = question_index
                         else:
-                            response = host_control_error
-                    case "start_quiz":
-                        if is_host:
-                            async with lock:
-                                status = await run_in_threadpool(
-                                    perform_database_operation,
-                                    operation=storage.start_quiz,
-                                    room_id=room_id,
-                                )
-                            if status == None:
-                                response = {
-                                    "send_to": "this",
-                                    "type": "error",
-                                    "error": "failed to start quiz",
-                                }
+                            response = {
+                                "send_to": "room",
+                                "type": "end_quiz",
+                                "status": "finished",
+                            }
+                    else:
+                        response = host_control_error
+                case "start_quiz":
+                    if is_host:
+                        async with lock:
+                            status = await run_in_threadpool(
+                                perform_database_operation,
+                                operation=storage.start_quiz,
+                                room_id=room_id,
+                            )
+                        if status == None:
+                            response = {
+                                "send_to": "this",
+                                "type": "error",
+                                "error": "failed to start quiz",
+                            }
+                    else:
+                        response = host_control_error
+                case "end_session":
+                    if not is_host:
+                        response = host_control_error
+                case "confirm_answer":
+                    if is_host:
+                        response = {
+                            "type": "error",
+                            "error": "host cannot confirm answer",
+                        }
+                    else:
+                        json_question_index = response.get("question_index")
+                        json_answer_index = response.get("answer_index")
+                        async with lock:
+                            correct: bool | None = await run_in_threadpool(
+                                perform_database_operation,
+                                operation=storage.check_answer_correct,
+                                room_id=room_id,
+                                player_id=user_id,
+                                json_question_index=json_question_index,
+                                json_answer_index=json_answer_index,
+                            )
+                        if correct is None:
+                            response = {
+                                "type": "error",
+                                "error": "question_index does not match",
+                            }
                         else:
-                            response = host_control_error
-                    case "end_session":
-                        if not is_host:
-                            response = host_control_error
-                    case "error":
-                        ...
-                    case _:
-                        raise ValueError("invalid response type")
+                            response = {
+                                "type": "answer_feedback",
+                                "answer_feedback": correct,
+                            }
+                case "error":
+                    ...
+                case _:
+                    raise ValueError("invalid response type")
 
-                match send_to:
-                    case "this":
-                        await websocket.send_json(response)
-                    case "room":
-                        await websocket_connections.multicast(
-                            response, room.id, user_id
-                        )
-                    case "_":
-                        raise ValueError("invalid send_to")
+            match send_to:
+                case "this":
+                    await websocket.send_json(response)
+                case "room":
+                    await websocket_connections.multicast(response, room.id, user_id)
+                case "_":
+                    raise ValueError("invalid send_to")
 
-                if is_host and response_type == "end_session":
-                    await websocket_connections.disconnect_all(room_id)
+            if is_host and response_type == "end_session":
+                await websocket_connections.disconnect_all(room_id)
 
     except WebSocketDisconnect, WebSocketDisconnected:
         await websocket_connections.disconnect(room.id, websocket)
