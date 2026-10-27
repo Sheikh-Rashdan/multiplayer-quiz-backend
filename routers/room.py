@@ -127,14 +127,16 @@ async def websocket_connection(
             if response_type is None:
                 raise ValueError("response must have a type")
 
+            if response_type in ("update", "confirm_answer"):
+                async with lock:
+                    room = await run_in_threadpool(
+                        perform_database_operation,
+                        operation=storage.get_room,
+                        room_id=room_id,
+                    )
+
             match response_type:
                 case "update":
-                    async with lock:
-                        room = await run_in_threadpool(
-                            perform_database_operation,
-                            operation=storage.get_room,
-                            room_id=room_id,
-                        )
                     response["room"] = room.to_json()
                 case "next_question":
                     if is_host:
@@ -186,35 +188,37 @@ async def websocket_connection(
                             "error": "host cannot confirm answer",
                         }
                     else:
-                        json_question_index = response.get("question_index")
-                        json_answer_index = response.get("answer_index")
-                        if last_question_index == json_question_index:
-                            response = {
-                                "type": "error",
-                                "error": "question_id already answered",
-                            }
+                        if room.status != "ongoing":
+                            response = {"type": "error", "error": "quiz is not ongoing"}
                         else:
-                            async with lock:
-                                correct: bool | None = await run_in_threadpool(
-                                    perform_database_operation,
-                                    operation=storage.check_answer_correct,
-                                    room_id=room_id,
-                                    player_id=user_id,
-                                    json_question_index=json_question_index,
-                                    json_answer_index=json_answer_index,
-                                )
-                            if correct is None:
+                            json_question_index = response.get("question_index")
+                            json_answer_index = response.get("answer_index")
+                            if last_question_index == json_question_index:
                                 response = {
                                     "type": "error",
-                                    "error": "question_index does not match",
+                                    "error": "question_id already answered",
                                 }
                             else:
-                                last_question_index = json_question_index
-                                response = {
-                                    "type": "answer_feedback",
-                                    "answer_feedback": correct,
-                                }
-
+                                async with lock:
+                                    correct: bool | None = await run_in_threadpool(
+                                        perform_database_operation,
+                                        operation=storage.check_answer_correct,
+                                        room_id=room_id,
+                                        player_id=user_id,
+                                        json_question_index=json_question_index,
+                                        json_answer_index=json_answer_index,
+                                    )
+                                if correct is None:
+                                    response = {
+                                        "type": "error",
+                                        "error": "question_index does not match",
+                                    }
+                                else:
+                                    last_question_index = json_question_index
+                                    response = {
+                                        "type": "answer_feedback",
+                                        "answer_feedback": correct,
+                                    }
                 case "error":
                     ...
                 case _:
