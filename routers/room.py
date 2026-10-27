@@ -91,7 +91,7 @@ async def websocket_connection(
     user_id = user.id
     is_host = (room.host_id == user_id) if room_exists else False
     quiz_started = room.status == "ongoing" if room_exists else False
-    duplicate_user_id = (user_id in room.player_ids) if room_exists else False
+    duplicate_user_id = (str(user_id) in room.player_ids) if room_exists else False
     last_question_index = -1
 
     await websocket_connections.connect(
