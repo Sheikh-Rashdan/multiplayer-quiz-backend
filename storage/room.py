@@ -77,7 +77,7 @@ def remove_player(db: Session, room_id: int, player_id: int) -> list[int]:
 
 def next_question(db: Session, room_id: int) -> int:
     room = get_room(db, room_id)
-    max_question_index = len(room.quiz.questions)
+    max_question_index = len(room.quiz.questions) - 1
 
     if room.status != "ongoing":
         return None
