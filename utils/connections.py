@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
+from fastapi.concurrency import run_in_threadpool
 from starlette.websockets import WebSocketDisconnected
 
 import storage.room as storage
@@ -50,8 +51,11 @@ class WebSocketConnections:
             )
 
         if not is_host:
-            player_ids = perform_database_operation(
-                operation=storage.add_player, room_id=room_id, player_id=user_id
+            player_ids = await run_in_threadpool(
+                perform_database_operation,
+                operation=storage.add_player,
+                room_id=room_id,
+                player_id=user_id,
             )
 
             response = {"type": "player_joined", "player_ids": player_ids}
@@ -64,8 +68,11 @@ class WebSocketConnections:
         if room_connection is not None and websocket in room_connection.websockets:
             user_id = room_connection.websockets.pop(websocket)
 
-            player_ids = perform_database_operation(
-                operation=storage.remove_player, room_id=room_id, player_id=user_id
+            player_ids = await run_in_threadpool(
+                perform_database_operation,
+                operation=storage.remove_player,
+                room_id=room_id,
+                player_id=user_id,
             )
 
             if player_ids is not None:
@@ -92,7 +99,9 @@ class WebSocketConnections:
 
         self.connections.pop(room_id, None)
 
-        perform_database_operation(operation=storage.delete_room, room_id=room_id)
+        await run_in_threadpool(
+            perform_database_operation, operation=storage.delete_room, room_id=room_id
+        )
 
     async def broadcast(self, data: dict, user_id: int | None = None) -> None:
         for room_id, room_connection in self.connections.items():
