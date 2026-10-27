@@ -104,15 +104,15 @@ class WebSocketConnections:
                 room_id=room_id,
             )
 
-        room_connection: RoomConnection | None = self.connections.get(room_id)
-        if room_connection is not None:
-            for websocket in room_connection.websockets.copy():
-                await websocket.close(
-                    code=status.WS_1001_GOING_AWAY, reason="host disconnected"
-                )
-                room_connection.websockets.pop(websocket, None)
+            room_connection: RoomConnection | None = self.connections.get(room_id)
+            if room_connection is not None:
+                for websocket in room_connection.websockets.copy():
+                    await websocket.close(
+                        code=status.WS_1001_GOING_AWAY, reason="host disconnected"
+                    )
+                    room_connection.websockets.pop(websocket, None)
 
-        self.connections.pop(room_id, None)
+            self.connections.pop(room_id, None)
 
     async def broadcast(self, data: dict, user_id: int | None = None) -> None:
         for room_id, room_connection in self.connections.items():
