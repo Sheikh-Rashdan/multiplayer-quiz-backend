@@ -92,6 +92,7 @@ async def websocket_connection(
     is_host = (room.host_id == user_id) if room_exists else False
     quiz_started = room.status == "ongoing" if room_exists else False
     duplicate_user_id = (user_id in room.player_ids) if room_exists else False
+    last_question_index = -1
 
     await websocket_connections.connect(
         room_id, websocket, user_id, is_host, quiz_started, duplicate_user_id
@@ -187,25 +188,33 @@ async def websocket_connection(
                     else:
                         json_question_index = response.get("question_index")
                         json_answer_index = response.get("answer_index")
-                        async with lock:
-                            correct: bool | None = await run_in_threadpool(
-                                perform_database_operation,
-                                operation=storage.check_answer_correct,
-                                room_id=room_id,
-                                player_id=user_id,
-                                json_question_index=json_question_index,
-                                json_answer_index=json_answer_index,
-                            )
-                        if correct is None:
+                        if last_question_index == json_question_index:
                             response = {
                                 "type": "error",
-                                "error": "question_index does not match",
+                                "error": "question_id already answered",
                             }
                         else:
-                            response = {
-                                "type": "answer_feedback",
-                                "answer_feedback": correct,
-                            }
+                            async with lock:
+                                correct: bool | None = await run_in_threadpool(
+                                    perform_database_operation,
+                                    operation=storage.check_answer_correct,
+                                    room_id=room_id,
+                                    player_id=user_id,
+                                    json_question_index=json_question_index,
+                                    json_answer_index=json_answer_index,
+                                )
+                            if correct is None:
+                                response = {
+                                    "type": "error",
+                                    "error": "question_index does not match",
+                                }
+                            else:
+                                last_question_index = json_question_index
+                                response = {
+                                    "type": "answer_feedback",
+                                    "answer_feedback": correct,
+                                }
+
                 case "error":
                     ...
                 case _:
