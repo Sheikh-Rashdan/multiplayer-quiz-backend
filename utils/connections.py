@@ -95,6 +95,15 @@ class WebSocketConnections:
             return player_ids
 
     async def disconnect_all(self, room_id: str):
+        lock = self.get_lock(room_id)
+
+        async with lock:
+            await run_in_threadpool(
+                perform_database_operation,
+                operation=storage.delete_room,
+                room_id=room_id,
+            )
+
         room_connection: RoomConnection | None = self.connections.get(room_id)
         if room_connection is not None:
             for websocket in room_connection.websockets.copy():
@@ -104,15 +113,6 @@ class WebSocketConnections:
                 room_connection.websockets.pop(websocket, None)
 
         self.connections.pop(room_id, None)
-
-        lock = self.get_lock(room_id)
-
-        async with lock:
-            await run_in_threadpool(
-                perform_database_operation,
-                operation=storage.delete_room,
-                room_id=room_id,
-            )
 
     async def broadcast(self, data: dict, user_id: int | None = None) -> None:
         for room_id, room_connection in self.connections.items():
