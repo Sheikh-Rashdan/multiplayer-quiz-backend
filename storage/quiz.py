@@ -6,8 +6,12 @@ from sqlalchemy.orm import Session
 from database.models import Quiz
 
 
-def get_quizzes(db: Session, limit: int, offset: int) -> list[Quiz]:
+def get_quizzes(
+    db: Session, limit: int, offset: int, author_id: int | None = None
+) -> list[Quiz]:
     statement = select(Quiz).limit(limit).offset(offset)
+    if author_id is not None:
+        statement = statement.where(Quiz.author_id == author_id)
     return db.scalars(statement).all()
 
 
