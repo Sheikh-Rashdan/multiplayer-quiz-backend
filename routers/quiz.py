@@ -37,6 +37,16 @@ def get_quizzes(
     return storage.get_quizzes(db, limit, offset, author_id)
 
 
+@quiz_router.get("/me", response_model=list[QuizModel])
+def get_my_quizzes(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=100, ge=1),
+    offset: int = Query(default=0, ge=0),
+):
+    return storage.get_quizzes(db, limit, offset, user.id)
+
+
 @quiz_router.get("/{quiz_id}", response_model=QuizModel)
 def get_quiz(quiz: Quiz = Depends(validate_quiz)):
     return quiz
