@@ -32,8 +32,9 @@ def get_quizzes(
     db: Session = Depends(get_db),
     limit: int = Query(default=100, ge=1),
     offset: int = Query(default=0, ge=0),
+    author_id: int | None = Query(default=None, ge=1),
 ):
-    return storage.get_quizzes(db, limit, offset)
+    return storage.get_quizzes(db, limit, offset, author_id)
 
 
 @quiz_router.get("/{quiz_id}", response_model=QuizModel)
