@@ -66,3 +66,8 @@ def login_user(user: User = Depends(validate_login)) -> User:
 @user_router.get("/me", response_model=UserModel)
 def get_user(user: User = Depends(get_current_user)):
     return user
+
+
+@user_router.get("/{user_id}", response_model=UserModel)
+def get_user_with_user_id(user_id: int, db: Session = Depends(get_db)):
+    return storage.get_user_with_id(db, user_id)
