@@ -40,6 +40,10 @@ def get_current_user(
     return user
 
 
+def get_current_user_websocket(token: str, db: Session = Depends(get_db)):
+    return get_current_user(token, db)
+
+
 def validate_username_unique(username: str, db: Session):
     user: User | None = storage.get_user_with_username(db, username)
     if user is None:

@@ -19,7 +19,7 @@ from database.db import get_db
 from database.models import Quiz, Room, User
 from models.room import RoomCreate, RoomModel
 from routers.quiz import validate_quiz, validate_quiz_belongs_to_user
-from routers.user import get_current_user
+from routers.user import get_current_user, get_current_user_websocket
 from utils.connections import (
     handle_websocket_message,
     perform_database_operation,
@@ -84,7 +84,7 @@ def generate_unique_code(db: Session):
 async def websocket_connection(
     websocket: WebSocket,
     room: Room = Depends(validate_optional_room),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_websocket),
 ):
     room_exists = room is not None
     room_id = room.id if room_exists else None
