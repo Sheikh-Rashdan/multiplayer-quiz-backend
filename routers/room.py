@@ -232,6 +232,15 @@ async def websocket_connection(
                 case "_":
                     raise ValueError("invalid send_to")
 
+            if (
+                response["type"] == "answer_feedback"
+                and response["answer_feedback"] == True
+            ):
+                player_ids = room.player_ids
+                player_ids[str(user_id)] += 1
+                response = {"type": "score_update", "player_ids": player_ids}
+                await websocket_connections.multicast(response, room_id, user_id)
+
             if is_host and response_type == "end_session":
                 await websocket_connections.disconnect_all(room_id)
 
