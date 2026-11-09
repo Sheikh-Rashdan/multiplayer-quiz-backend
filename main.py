@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
+from os import getenv
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,9 +24,12 @@ app.include_router(quiz_router)
 app.include_router(question_router)
 app.include_router(room_router)
 
+load_dotenv()
+origin = getenv("ALLOW_ORIGIN")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
