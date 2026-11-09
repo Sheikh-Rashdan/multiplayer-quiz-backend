@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -28,6 +29,18 @@ def post_room(db: Session, create_dict: dict[str, Any]) -> Room:
 
 def delete_room(db: Session, room_id: int) -> None:
     statement = delete(Room).where(Room.id == room_id)
+    db.execute(statement)
+
+    try:
+        db.commit()
+    except:
+        db.rollback()
+        raise
+
+
+def delete_old_rooms(db: Session) -> None:
+    cutoff_time = datetime.now() - timedelta(hours=6)
+    statement = delete(Room).where(Room.created_at < cutoff_time)
     db.execute(statement)
 
     try:
