@@ -28,6 +28,13 @@ def validate_login(user_credentials: UserCredentials, db: Session = Depends(get_
     raise HTTPException(status_code=401, detail="Incorrect username or password")
 
 
+def validate_user_exists(user_id: int, db: Session = Depends(get_db)):
+    user: User | None = storage.get_user_with_id(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
@@ -73,5 +80,5 @@ def get_user(user: User = Depends(get_current_user)):
 
 
 @user_router.get("/{user_id}", response_model=UserModel)
-def get_user_with_user_id(user_id: int, db: Session = Depends(get_db)):
-    return storage.get_user_with_id(db, user_id)
+def get_user_with_user_id(user: User = Depends(validate_user_exists)):
+    return user
