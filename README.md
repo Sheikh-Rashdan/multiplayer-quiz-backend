@@ -166,15 +166,210 @@ The frontend opens the room WebSocket at `/rooms/{room_id}` and supplies its JWT
 
 ## WebSocket Gameplay
 
-The WebSocket endpoint is used to coordinate multiplayer quiz sessions in real time.
+The WebSocket endpoint coordinates a room in real time. Create a room first with
+`POST /rooms`, then connect the host and players to `WS /rooms/{room_id}`. The
+five-letter room ID is returned by `POST /rooms`. The host must be the quiz
+owner; players must have authenticated user accounts.
 
-Typical flow:
+### Connecting
 
-1. A quiz owner creates a room.
-2. Players join the room through the room code / room ID.
-3. The host starts the quiz session.
-4. Participants submit answers over the live connection.
-5. Server validates answers and pushes updated room state back to clients.
+Pass the user's JWT in the `token` query parameter when opening the socket:
+
+```text
+ws://localhost:8000/rooms/ABCDE?token=<JWT>
+```
+
+For the hosted backend, use `wss://multiplayer-quiz-backend.onrender.com/rooms/ABCDE?token=<JWT>`.
+The token is obtained from `POST /users/login`. The host should connect before
+players: a player connection is rejected if the host is not currently connected.
+The same user cannot join a room twice, and a room cannot be joined after its
+quiz has started. A missing room, duplicate player, already-started quiz, or
+disconnected host rejects the connection with a policy-violation close. An
+invalid or missing token is rejected during authentication.
+
+After connecting, send and receive JSON objects. The `type` property selects a
+message. Room-wide messages are sent to every connected socket in the room;
+direct responses are sent only to the client that made the request. The server
+does not automatically send a room snapshot on connect, so clients can request
+one with `update`.
+
+### Typical session
+
+1. The host creates the room over REST and connects to its WebSocket.
+2. Players connect using that room ID. Existing clients receive a
+   `player_joined` event.
+3. The host starts the quiz and advances through questions.
+4. Players submit an answer for the current question and receive private
+   feedback.
+5. The host advances past the last question to finish the quiz, or ends the
+   session to close the room.
+
+### Client messages and server responses
+
+#### Request the current room state (host or player)
+
+Send:
+
+```json
+{"type": "update"}
+```
+
+Only the requesting client receives the response. `room` contains the current
+room fields (`id`, `host_id`, `quiz_id`, `status`, `player_ids`,
+`question_index`, and `created_at`; `created_at` is a Unix timestamp):
+
+```json
+{
+  "type": "update",
+  "room": {
+    "id": "ABCDE",
+    "host_id": 1,
+    "quiz_id": 12,
+    "status": "waiting",
+    "player_ids": {"2": 0},
+    "question_index": 0,
+    "created_at": 1762750000.0
+  }
+}
+```
+
+#### Player joins or leaves (server event)
+
+When a player connects or disconnects, the other clients in the room receive
+the updated player IDs and scores. Player IDs are JSON object keys (strings):
+
+```json
+{"type": "player_joined", "player_ids": {"2": 0}}
+```
+
+```json
+{"type": "player_left", "player_ids": {}}
+```
+
+The newly connected player is not included in its own `player_joined`
+broadcast, so it can use `update` to retrieve the current room state.
+
+#### Start the quiz (host only)
+
+Send:
+
+```json
+{"type": "start_quiz"}
+```
+
+All clients receive:
+
+```json
+{"type": "start_quiz", "status": "ongoing"}
+```
+
+The quiz must still be waiting and at least one player must be connected.
+Otherwise, the host receives:
+
+```json
+{"type": "error", "error": "failed to start quiz"}
+```
+
+#### Advance to the next question (host only)
+
+Send:
+
+```json
+{"type": "next_question"}
+```
+
+All clients receive the zero-based question index:
+
+```json
+{"type": "next_question", "question_index": 0}
+```
+
+The room's question index starts at `0`; advancing after the last question
+finishes the quiz and sends:
+
+```json
+{"type": "end_quiz", "status": "finished"}
+```
+
+If the quiz is not ongoing, the host instead receives:
+
+```json
+{"type": "error", "error": "quiz is not ongoing"}
+```
+
+#### Submit an answer (player only)
+
+Send the current zero-based question index and the chosen zero-based option
+index:
+
+```json
+{"type": "confirm_answer", "question_index": 0, "answer_index": 1}
+```
+
+Only that player receives feedback; `answer_feedback` is `true` for a correct
+answer and `false` for an incorrect one:
+
+```json
+{"type": "answer_feedback", "answer_feedback": true}
+```
+
+Correct answers increment the player's score in `player_ids`. A player can
+submit only one answer per question per connection, including after an incorrect
+answer. The host cannot submit an answer. Examples of direct error responses:
+
+```json
+{"type": "error", "error": "message must include question_index and answer_index"}
+```
+
+```json
+{"type": "error", "error": "question_index does not match"}
+```
+
+Other answer errors include `"host cannot confirm answer"`,
+`"quiz is not ongoing"`, and `"question_id already answered"`.
+
+#### End the room (host only)
+
+Send:
+
+```json
+{"type": "end_session"}
+```
+
+All clients receive:
+
+```json
+{"type": "end_session"}
+```
+
+The server then deletes the room and closes its WebSocket connections. A player
+trying to end the session receives:
+
+```json
+{"type": "error", "error": "only host can control the room"}
+```
+
+### Error messages
+
+Malformed JSON and unsupported message types receive an error directly:
+
+```json
+{"type": "error", "error": "invalid json"}
+```
+
+```json
+{"type": "error", "error": "missing type"}
+```
+
+```json
+{"type": "error", "error": "invalid type"}
+```
+
+`next_question`, `start_quiz`, and `end_session` are host-only controls. If a
+player sends one, the server responds directly with
+`{"type": "error", "error": "only host can control the room"}`. Some validation
+errors close the connection during the handshake rather than returning a JSON
+message; see the connection requirements above.
 
 ## Notes and Constraints
 
