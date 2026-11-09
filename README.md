@@ -2,11 +2,12 @@
 
 A FastAPI backend for a multiplayer quiz application with JWT authentication, quiz/question management, and real-time room gameplay over WebSockets.
 
-Hosted backend: https://multiplayer-quiz-backend.onrender.com/
+Hosted backend: https://multiplayer-quiz-backend.onrender.com/ <br />
+Hosted frontend: https://multiplayer-quiz-frontend.onrender.com/
 
 ## Overview
 
-This project was built to explore how to model a multiplayer quiz system end-to-end: user accounts, quiz ownership, question sets, room state, and live answer processing in real time.
+This project was built to explore how to model a multiplayer quiz system end-to-end: user accounts, quiz ownership, question sets, room state, and live answer processing in real time. The browser client is the [Multiplayer Quiz Frontend](https://github.com/Sheikh-Rashdan/multiplayer-quiz-frontend), a React and Vite application.
 
 The server exposes a REST API for managing users, quizzes, and questions, and a WebSocket endpoint for live room sessions.
 
@@ -150,6 +151,18 @@ The API will be available at:
 - `POST /rooms` — create a room for a quiz
 - `GET /rooms/{room_id}` — fetch room details
 - `WS /rooms/{room_id}` — connect to a live room WebSocket
+
+## Frontend Integration
+
+The [hosted frontend](https://multiplayer-quiz-frontend.onrender.com/) uses this backend for authentication, quiz and question management, and live room gameplay. Configure the frontend's `VITE_API_URL` to this backend's base URL:
+
+```env
+VITE_API_URL=https://multiplayer-quiz-backend.onrender.com
+```
+
+For local frontend development, use `http://127.0.0.1:8000` and set `ALLOW_ORIGIN=http://localhost:5173` in the backend's `.env`. The backend allows `http://localhost:5173` by default; `ALLOW_ORIGIN` adds the configured frontend origin for cross-origin REST requests.
+
+The frontend opens the room WebSocket at `/rooms/{room_id}` and supplies its JWT as the `token` query parameter. It uses the authentication, quiz, question, and room routes listed above. The interactive API documentation is available at [the hosted Swagger UI](https://multiplayer-quiz-backend.onrender.com/docs).
 
 ## WebSocket Gameplay
 
