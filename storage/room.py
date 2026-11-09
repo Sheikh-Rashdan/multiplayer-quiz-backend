@@ -24,6 +24,8 @@ def post_room(db: Session, create_dict: dict[str, Any]) -> Room:
         db.rollback()
         raise
 
+    delete_old_rooms(db)
+
     return room
 
 
